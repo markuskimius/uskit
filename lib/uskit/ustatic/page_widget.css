@@ -1,0 +1,73 @@
+* {
+    margin           : 0;
+}
+
+html, body {
+    font-family      : var(--uskit-font);
+    color            : var(--uskit-fgcolor);
+    background-color : var(--uskit-bgcolor);
+    height           : 100%;
+}
+
+uskit-widget.uskit-page > uskit-title {
+    display           : block;
+    width             : 100%;
+    position          : fixed;
+    top               : 0;
+    box-sizing        : border-box;
+    padding           : 0 0.8rem 0 0.8rem;
+    font-size         : 115%;
+    font-weight       : bold;
+    white-space       : nowrap;
+    overflow          : hidden;
+    color             : var(--uskit-bgcolor);
+    background-color  : var(--uskit-fgcolor);
+    z-index           : 1;
+}
+
+uskit-widget.uskit-page > uskit-content {
+    display           : block;
+    float             : left;
+    width             : 100%;
+    box-sizing        : border-box;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+    padding           : 0.8rem 0.8rem 0rem 0.8rem;
+    margin-top        : 1.6rem;
+}
+
+/*
+* Reserving some space after the content ensures no content is covered by
+* uskit-status.
+*/
+uskit-widget.uskit-page > uskit-content::after {
+    content           : ".";
+    visibility        : hidden;
+}
+
+uskit-widget.uskit-page > uskit-status {
+    display           : block;
+    width             : 100%;
+    position          : fixed;
+    bottom            : 0;
+    box-sizing        : border-box;
+    padding           : 0 0.8rem 0 0.8rem;
+    font-size         : 85%;
+    white-space       : nowrap;
+    overflow          : hidden;
+    color             : var(--uskit-bgcolor);
+    background-color  : var(--uskit-fgcolor);
+}
+
+/*
+* Reserving some space after the status line ensures the line shows even when
+* there is no content.
+*/
+uskit-widget.uskit-page > uskit-status::after {
+    content           : ".";
+    visibility        : hidden;
+}
+
+uskit-widget.uskit-page > uskit-status.uskit-error {
+    color             : var(--uskit-error);
+}

@@ -1,0 +1,19 @@
+{
+    "txnService"     : "TXN_CHAT",
+    "operationByTxn" : {
+        "TXN_CHAT" : "insert"
+    },
+    "fields"         : [
+        {
+            "name"       : "MESSAGE_TEXT",
+            "target"     : "MESSAGE.MESSAGE_TEXT",
+            "requiredBy" : [ "TXN_CHAT" ]
+        },
+        {
+            "name"       : "USER_ID",
+            "source"     : "txn.USER_ID",
+            "target"     : "MESSAGE.USER_ID",
+            "requiredBy" : [ "TXN_CHAT" ]
+        }
+    ]
+}

@@ -1,0 +1,34 @@
+{
+    "tables" : [ "USER", "MESSAGE" ],
+
+    "fieldsByTable"    : {
+        "USER"         : [ "TIMESTAMP", "USER_ID", "USER_NAME", "USER_ROLE", "API_KEY" ],
+        "MESSAGE"      : [ "TIMESTAMP", "USER_ID", "MESSAGE_ID", "MESSAGE_TEXT" ]
+    },
+
+    "typesByField"     : {
+        "USER_ID"      : "integer" ,
+        "USER_NAME"    : "text"    ,
+        "USER_ROLE"    : "text"    ,
+        "API_KEY"      : "text"    ,
+
+        "MESSAGE_ID"   : "integer" ,
+        "MESSAGE_TEXT" : "text"    ,
+        "TIMESTAMP"    : "text"
+    },
+
+    "keyfieldsByTable" : {
+        "USER"         : [ "USER_ID" ],
+        "MESSAGE"      : [ "MESSAGE_ID" ]
+    },
+
+    "indexesByTable"   : {
+        "USER"         : [ "USER_BY_TIMESTAMP" ],
+        "MESSAGE"      : [ "MESSAGE_BY_TIMESTAMP" ]
+    },
+
+    "fieldsByIndex"    : {
+        "USER_BY_TIMESTAMP"    : [ "TIMESTAMP" ],
+        "MESSAGE_BY_TIMESTAMP" : [ "TIMESTAMP" ]
+    }
+}

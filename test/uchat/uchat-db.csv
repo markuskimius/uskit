@@ -1,0 +1,11 @@
+USER.USER_ID.i,USER.USER_NAME.s,USER.USER_ROLE.s,USER.API_KEY.s
+1,"admin","ADMIN","456b7016a916a4b178dd72b947c152b7"
+2,"Alice","USER","9265043d3ed60c298bf724d7bfede7e6"
+3,"Bob","USER","a2eae7400008e77790c3272f754a14db"
+4,"Eve","USER","57874dc464a8b1ab369b3b2f02b83ac8"
+
+MESSAGE.MESSAGE_ID.i,MESSAGE.USER_ID.i,MESSAGE.MESSAGE_TEXT.s
+1,2,"Welcome to our chatroom!"
+2,3,"Hi, Alice!"
+3,2,"Hi, Bob!"
+4,4,"Hello everyone!"

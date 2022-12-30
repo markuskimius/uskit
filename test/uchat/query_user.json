@@ -1,0 +1,43 @@
+{
+    "queryName"  : "QUERY_USER",
+    "joinspec"   : [
+        {
+            "table"  : "USER",
+            "alias"  : "u"
+        }
+    ],
+    "fields"     : [
+        {
+            "name"   : "f_USER_ID",
+            "source" : "u.USER_ID",
+            "title"  : "User ID",
+            "type"   : "integer"
+        },
+        {
+            "name"   : "f_USER_NAME",
+            "source" : "u.USER_NAME",
+            "title"  : "User Name",
+            "type"   : "text"
+        },
+        {
+            "name"   : "f_USER_ROLE",
+            "source" : "u.USER_ROLE",
+            "title"  : "User Role",
+            "type"   : "text"
+        },
+        {
+            "name"   : "f_API_KEY",
+            "source" : "u.API_KEY",
+            "title"  : "API Key",
+            "type"   : "text"
+        }
+    ],
+    "allowWhere" : [
+        {
+            "table"  : "USER",
+            "alias"  : "u",
+            "where"  : "u.USER_NAME=? and u.USER_ROLE='ADMIN'",
+            "args"   : [ "query.USER_NAME" ]
+        }
+    ]
+}

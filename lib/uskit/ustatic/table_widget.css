@@ -1,0 +1,129 @@
+@import url("https://fonts.googleapis.com/icon?family=Material+Icons+Sharp");
+
+table[is="uskit-table"] {
+    display           : inline-block;
+    border-collapse   : separate;
+    border-spacing    : 0;
+    overflow-y        : auto;
+}
+
+/*
+* Set height (or max-height) on the table to display the scrollbar when the
+* content overflows.
+*/
+table[is="uskit-table"]::-webkit-scrollbar {
+    width             : 1.3rem;
+}
+
+table[is="uskit-table"]::-webkit-scrollbar-thumb {
+    background-color  : var(--uskit-fgcolor);
+    border-top        : solid 0.4rem var(--uskit-bgcolor);
+    border-left       : solid 0.4rem var(--uskit-bgcolor);
+    border-right      : solid 0.4rem var(--uskit-bgcolor);
+    border-bottom     : solid 0.4rem var(--uskit-bgcolor);
+    border-radius     : 0.75rem;
+}
+
+/*
+* The header and footer rows use sticky position to ensure they are always
+* displayed even when scrolling.
+*/
+table[is="uskit-table"] > thead {
+    position          : sticky;
+    top               : 0;
+}
+
+table[is="uskit-table"] > tfoot {
+    position          : sticky;
+    bottom            : 0;
+    background-color  : var(--uskit-bgcolor);
+}
+
+table[is="uskit-table"] > * > tr > * {
+    border-right      : 1px solid var(--uskit-fgcolor);
+    border-top        : 1px solid var(--uskit-fgcolor);
+    padding           : 0 0.8rem 0 0.8rem;
+    white-space       : nowrap;
+}
+
+/* Sorted ascending */
+table[is="uskit-table"] > thead > tr > *.uskit-clickable[data-uskit-sort="asc"]::after {
+    font-family: "Material Icons Sharp";
+    vertical-align: middle;
+    display: inline-block;
+    content: "\2009\25b2";
+    transform: scale(1, 1);
+}
+
+/* Sorted descending */
+table[is="uskit-table"] > thead > tr > *.uskit-clickable[data-uskit-sort="desc"]::after {
+    font-family: "Material Icons Sharp";
+    vertical-align: middle;
+    display: inline-block;
+    content: "\2009\25b2";
+    transform: scale(1, -1);
+}
+
+/* Sorted ascending + filtered */
+table[is="uskit-table"] > thead > tr > *.uskit-clickable[data-uskit-filter][data-uskit-sort="asc"]::after {
+    font-family: "Material Icons Sharp";
+    vertical-align: middle;
+    display: inline-block;
+    content: "\2009\e152";
+    transform: scale(1, -1);
+}
+
+/* Sorted descending + filtered */
+table[is="uskit-table"] > thead > tr > *.uskit-clickable[data-uskit-filter][data-uskit-sort="desc"]::after {
+    font-family: "Material Icons Sharp";
+    vertical-align: middle;
+    display: inline-block;
+    content: "\2009\e152";
+    transform: scale(1, 1);
+}
+
+/* Filtered only */
+table[is="uskit-table"] > thead > tr > *.uskit-clickable[data-uskit-filter]:not([data-uskit-sort])::after {
+    font-family: "Material Icons Sharp";
+    vertical-align: middle;
+    display: inline-block;
+    content: "\2009\ef4f";
+}
+
+table[is="uskit-table"] > tbody > tr:nth-child(odd) > * {
+    background-color  : var(--uskit-bgcolor);
+}
+
+table[is="uskit-table"] > tbody > tr:nth-child(even) > * {
+    background-color  : var(--uskit-shadow);
+}
+
+table[is="uskit-table"] > tbody > tr.uskit-selected > * {
+    background-color  : var(--uskit-select);
+}
+
+table[is="uskit-table"] > tbody > tr.uskit-anchor {
+    outline-width     : 2px;
+    outline-style     : solid;
+    outline-color     : var(--uskit-anchor);
+    outline-offset    : -2px;
+}
+
+table[is="uskit-table"] > *:last-child > tr:last-child > * {
+    border-bottom     : 1px solid var(--uskit-fgcolor);
+}
+
+table[is="uskit-table"] > * > tr > *:first-child {
+    border-left       : 1px solid var(--uskit-fgcolor);
+}
+
+table[is="uskit-table"] > * > tr > th {
+    color             : var(--uskit-bgcolor);
+    background-color  : var(--uskit-fgcolor);
+    border-right      : 1px solid var(--uskit-shadow);
+}
+
+table[is="uskit-table"] > * > tr > th:last-child {
+    border-right      : 1px solid var(--uskit-fgcolor);
+}
+

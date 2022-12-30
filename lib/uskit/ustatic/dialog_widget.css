@@ -1,0 +1,121 @@
+/*
+* Flexbox column is used to ensure (1) the dialog displays in the
+* title-content-buttons-status order, and (2) resizing the dialog box causes
+* only the content to resize.
+*/
+uskit-widget.uskit-dialog {
+    display           : flex;
+    position          : fixed;
+    flex-flow         : column;
+    z-index           : 10;
+    overflow          : hidden;
+    resize            : both;
+    padding           : 0;
+    margin            : 0;
+    min-width         : 12rem;
+    min-height        : 7rem;
+}
+
+/*
+* The background covers the whole screen.
+*/
+uskit-widget.uskit-dialog > uskit-bg {
+    display           : block;
+    position          : fixed;
+    top               : 0;
+    left              : 0;
+    width             : 100%;
+    height            : 100%;
+    z-index           : -1;
+    background-color  : var(--uskit-mask);
+}
+
+uskit-widget.uskit-dialog > uskit-title {
+    display           : block;
+    position          : sticky;
+    top               : 0;
+    flex              : 0 1 auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    border-bottom     : none;
+    border-radius     : 0.4rem 0.4rem 0 0;
+    box-sizing        : border-box;
+    padding           : 0 0.8rem 0 0.8rem;
+    font-weight       : bold;
+    white-space       : nowrap;
+    color             : var(--uskit-bgcolor);
+    background-color  : var(--uskit-fgcolor);
+    z-index           : 1;
+}
+
+uskit-widget.uskit-dialog > uskit-content {
+    display           : block;
+    flex              : 1 1 auto;
+    overflow          : auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    border-top        : none;
+    border-bottom     : none;
+    box-sizing        : border-box;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+    padding           : 0.8rem;
+    margin            : 0;
+}
+
+uskit-widget.uskit-dialog > uskit-content::-webkit-scrollbar {
+    width             : 1.3rem;
+    height            : 1.3rem;
+}
+
+uskit-widget.uskit-dialog > uskit-content::-webkit-scrollbar-thumb {
+    background-color  : var(--uskit-fgcolor);
+    border-top        : solid 0.4rem var(--uskit-bgcolor);
+    border-left       : solid 0.4rem var(--uskit-bgcolor);
+    border-right      : solid 0.4rem var(--uskit-bgcolor);
+    border-bottom     : solid 0.4rem var(--uskit-bgcolor);
+    border-radius     : 0.75rem;
+}
+
+uskit-widget.uskit-dialog > uskit-content::-webkit-scrollbar-corner {
+    background-color  : var(--uskit-bgcolor);
+}
+
+uskit-widget.uskit-dialog > uskit-control {
+    display           : block;
+    flex              : 0 1 auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    border-top        : none;
+    border-bottom     : none;
+    box-sizing        : border-box;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+    text-align        : center;
+    white-space       : nowrap;
+    padding           : 0rem 0.8rem 0.1rem 0.8rem;
+}
+
+uskit-widget.uskit-dialog > uskit-control > button {
+    min-width         : 5rem;
+}
+
+uskit-widget.uskit-dialog > uskit-status {
+    display           : block;
+    flex              : 0 1 auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    box-sizing        : border-box;
+    border-radius     : 0 0 0.4rem 0.4rem;
+    padding           : 0 0.8rem 0 0.8rem;
+    font-size         : 85%;
+    white-space       : nowrap;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+}
+
+uskit-widget.uskit-dialog > uskit-status.uskit-error {
+    color             : var(--uskit-error);
+}
+
+uskit-widget.uskit-dialog > uskit-status::after {
+    content           : ".";
+    visibility        : hidden;
+}
+

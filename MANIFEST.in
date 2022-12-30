@@ -1,0 +1,2 @@
+include lib/uskit/*
+include lib/uskit/ustatic/*

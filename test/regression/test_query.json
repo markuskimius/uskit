@@ -1,0 +1,55 @@
+{
+    "queryName"  : "CHAT_QUERY",
+    "joinspec"   : [
+        {
+            "table"    : "MESSAGE",
+            "alias"    : "m"
+        },
+        {
+            "table"    : "USER",
+            "alias"    : "u",
+            "joinOn"   : "u.USER_ID = m.USER_ID",
+            "joinType" : "left"
+        }
+    ],
+    "fields"     : [
+        {
+            "name"     : "f_TIMESTAMP",
+            "source"   : "m.TIMESTAMP",
+            "title"    : "Timestamp",
+            "type"     : "datetime"
+        },
+        {
+            "name"     : "f_MESSAGE_ID",
+            "source"   : "m.MESSAGE_ID",
+            "title"    : "Message ID",
+            "type"     : "integer"
+        },
+        {
+            "name"     : "f_MESSAGE_TEXT",
+            "source"   : "m.MESSAGE_TEXT",
+            "title"    : "Message Text",
+            "type"     : "text"
+        },
+        {
+            "name"     : "f_USER_ID",
+            "source"   : "u.USER_ID",
+            "title"    : "User ID",
+            "type"     : "integer"
+        },
+        {
+            "name"     : "f_USER_NAME",
+            "source"   : "u.USER_NAME",
+            "title"    : "User Name",
+            "type"     : "text"
+        }
+    ],
+    "allowWhere" : [
+        {
+            "table"    : "USER",
+            "alias"    : "u",
+            "where"    : "u.USER_NAME=? and u.USER_ROLE='ADMIN'",
+            "args"     : [ "login.USER_NAME" ]
+        }
+    ]
+}

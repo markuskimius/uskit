@@ -1,0 +1,18 @@
+.uskit-dialog {
+    width         : 25rem;
+}
+
+.uchat-dialog-instructions {
+    margin-bottom : 0.8rem;
+}
+
+.uchat-dialog-row {
+    overflow      : hidden;
+    white-space   : nowrap;
+}
+
+.uchat-dialog-text {
+    display       : inline-block;
+    width         : 6rem;
+    text-align    : right;
+}

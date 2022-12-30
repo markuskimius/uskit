@@ -1,0 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
+:root {
+        --uskit-fgcolor        : #222;
+        --uskit-bgcolor        : #ddd;
+        --uskit-shadow         : #bbb;
+        --uskit-select         : #ccf;
+        --uskit-anchor         : rgba(0, 0, 0, 0);
+        --uskit-error          : #f00;
+        --uskit-mask           : rgba(0, 0, 0, 0.5);
+        --uskit-font           : "Poppins", sans-serif;
+        --uskit-flash-duration : 1s;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --uskit-fgcolor        : #ddd;
+        --uskit-bgcolor        : #222;
+        --uskit-shadow         : #444;
+        --uskit-select         : #033;
+        --uskit-anchor         : rgba(0, 0, 0, 0);
+    }
+}
+
+.uskit-flash-in {
+    animation-name             : uskit-flash-in;
+    animation-delay            : 0s;
+    animation-duration         : var(--uskit-flash-duration);
+    animation-fill-mode        : forwards;
+    animation-direction        : alternate;
+    animation-iteration-count  : 1;
+}
+
+@keyframes uskit-flash-in {
+    from {
+        filter      : invert(100%);
+    }
+    to   { }
+}
+
+
+.uskit-flash-out {
+    animation-name             : uskit-flash-out;
+    animation-delay            : 0s;
+    animation-duration         : var(--uskit-flash-duration);
+    animation-fill-mode        : forwards;
+    animation-direction        : alternate;
+    animation-iteration-count  : 1;
+}
+
+@keyframes uskit-flash-out {
+    from {
+        filter      : invert(100%);
+    }
+    to   {
+        max-height  : 0;
+        line-height : 0;
+        font-size   : 0;
+        opacity     : 0;
+    }
+}

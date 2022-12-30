@@ -1,0 +1,35 @@
+{
+    "queryName" : "QUERY_CHAT",
+    "joinspec"  : [
+        {
+            "table"        : "MESSAGE",
+            "alias"        : "m"
+        },
+        {
+            "table"        : "USER",
+            "alias"        : "u",
+            "joinOn"       : "u.USER_ID = m.USER_ID",
+            "joinType"     : "left"
+        }
+    ],
+    "fields"    : [
+        {
+            "name"         : "f_TIMESTAMP",
+            "source"       : "m.TIMESTAMP",
+            "title"        : "Timestamp",
+            "type"         : "datetime"
+        },
+        {
+            "name"         : "f_USER_NAME",
+            "source"       : "u.USER_NAME",
+            "title"        : "User Name",
+            "type"         : "text"
+        },
+        {
+            "name"         : "f_MESSAGE_TEXT",
+            "source"       : "m.MESSAGE_TEXT",
+            "title"        : "Message Text",
+            "type"         : "text"
+        }
+    ]
+}

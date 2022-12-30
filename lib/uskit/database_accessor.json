@@ -1,0 +1,9 @@
+{
+    "defaultFields" : [
+        "TIMESTAMP"
+    ],
+
+    "typesByField"  : {
+        "TIMESTAMP" : "text"
+    }
+}

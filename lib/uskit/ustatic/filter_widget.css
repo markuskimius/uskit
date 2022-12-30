@@ -1,0 +1,98 @@
+/*
+* Flexbox column is used to ensure (1) the filter box displays in the
+* title-content-buttons order, and (2) resizing the filter box causes
+* only the content to resize.
+*/
+uskit-widget.uskit-filter {
+    font-size         : 85%;
+    display           : flex;
+    position          : absolute;
+    flex-flow         : column;
+    z-index           : 10;
+    overflow          : hidden;
+    resize            : both;
+    padding           : 0;
+    margin            : 0;
+    min-width         : 8rem;
+    min-height        : 5rem;
+}
+
+/*
+* The background covers the whole screen.
+*/
+uskit-widget.uskit-filter > uskit-control > uskit-bg {
+    display           : block;
+    position          : fixed;
+    top               : 0;
+    left              : 0;
+    width             : 100%;
+    height            : 100%;
+    z-index           : -1;
+    /* background-color  : var(--uskit-mask); */
+}
+
+uskit-widget.uskit-filter > uskit-title {
+    display           : block;
+    position          : sticky;
+    top               : 0;
+    flex              : 0 1 auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    box-sizing        : border-box;
+    padding           : 0 0.3rem 0 0.3rem;
+    font-weight       : bold;
+    white-space       : nowrap;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+    z-index           : 1;
+}
+
+uskit-widget.uskit-filter > uskit-content {
+    display           : block;
+    flex              : 1 1 auto;
+    overflow          : auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    border-top        : none;
+    border-bottom     : none;
+    box-sizing        : border-box;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+    padding           : 0.3rem;
+    margin            : 0;
+}
+
+uskit-widget.uskit-filter > uskit-content::-webkit-scrollbar {
+    width             : 1.3rem;
+    height            : 1.3rem;
+}
+
+uskit-widget.uskit-filter > uskit-content::-webkit-scrollbar-thumb {
+    background-color  : var(--uskit-fgcolor);
+    border-top        : solid 0.4rem var(--uskit-bgcolor);
+    border-left       : solid 0.4rem var(--uskit-bgcolor);
+    border-right      : solid 0.4rem var(--uskit-bgcolor);
+    border-bottom     : solid 0.4rem var(--uskit-bgcolor);
+    border-radius     : 0.75rem;
+}
+
+uskit-widget.uskit-filter > uskit-content::-webkit-scrollbar-corner {
+    background-color  : var(--uskit-bgcolor);
+}
+
+uskit-widget.uskit-filter > uskit-control {
+    display           : block;
+    flex              : 0 1 auto;
+    border            : 1px solid var(--uskit-fgcolor);
+    border-top        : none;
+    box-sizing        : border-box;
+    color             : var(--uskit-fgcolor);
+    background-color  : var(--uskit-bgcolor);
+    text-align        : center;
+    white-space       : nowrap;
+    padding           : 0rem 0.3rem 0.1rem 0.3rem;
+}
+
+uskit-widget.uskit-filter > uskit-control > button {
+    min-width         : 3rem;
+    font-size         : 85%;
+}
+

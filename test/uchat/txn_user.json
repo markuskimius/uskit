@@ -1,0 +1,38 @@
+{
+    "txnService"     : "TXN_USER",
+    "operationByTxn" : {
+        "TXN_USER_ADD"    : "insert",
+        "TXN_USER_EDIT"   : "update",
+        "TXN_USER_DELETE" : "delete"
+    },
+    "fields"         : [
+        {
+            "name"        : "USER_ID",
+            "target"      : "USER.USER_ID",
+            "requiredBy"  : [ "TXN_USER_EDIT", "TXN_USER_DELETE" ]
+        },
+        {
+            "name"        : "USER_NAME",
+            "target"      : "USER.USER_NAME",
+            "requiredBy"  : [ "TXN_USER_ADD" ]
+        },
+        {
+            "name"        : "USER_ROLE",
+            "target"      : "USER.USER_ROLE",
+            "requiredBy"  : [ "TXN_USER_ADD" ]
+        },
+        {
+            "name"        : "API_KEY",
+            "target"      : "USER.API_KEY",
+            "requiredBy"  : [ "TXN_USER_ADD" ]
+        }
+    ],
+    "allowWhere"     : [
+        {
+            "table"       : "USER",
+            "alias"       : "u",
+            "where"       : "u.USER_NAME=? and u.USER_ROLE='ADMIN'",
+            "args"        : [ "txn.USER_NAME" ]
+        }
+    ]
+}
