@@ -3,6 +3,13 @@
 A microservices kit.
 
 
+## Documentation
+
+Please see:
+
+https://uskit.readthedocs.io/en/latest/
+
+
 ## License
 
 [Apache 2.0]
