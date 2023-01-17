@@ -4,8 +4,8 @@ uskit: a microservices kit
 Overview
 --------
 
-`uskit <https://github.com/markuskimius/uskit>`_ aims to provide the essential
-components of a simple service.  It comes with:
+`uskit <https://github.com/markuskimius/uskit>`_ aims to provide the essentials
+for a simple microservice.  It comes with:
 
 * A databaase to store data.
 * A server API to publish the data, and receive requests to modify it.
