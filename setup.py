@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
+import os
+import sys
 from setuptools import setup, find_packages
-from glob import glob
-from os import path
+
+SCRIPTDIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.abspath(os.path.join(SCRIPTDIR, "lib")))
+
 import uskit
 
-SCRIPTDIR = path.abspath(path.dirname(__file__))
-
-with open(path.join(SCRIPTDIR, "README.md"), encoding="utf-8") as f:
+with open(os.path.join(SCRIPTDIR, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
