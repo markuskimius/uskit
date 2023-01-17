@@ -5,8 +5,3 @@ Client API Reference (Python)
 
     import uskit
 
-.. autofunction:: createServer
-.. autofunction:: createTxnService
-.. autofunction:: createQueryService
-.. autofunction:: createDatabaseAccessor
-
