@@ -3,6 +3,13 @@
 A microservices kit.
 
 
+## Installation
+
+```bash
+pip3 install uskit
+```
+
+
 ## Documentation
 
 https://uskit.readthedocs.io/en/latest/

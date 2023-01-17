@@ -14,6 +14,13 @@ components of a simple service.  It comes with:
 This document is a work in progress.
 
 
+Installation
+------------
+::
+
+    pip3 install uskit
+
+
 API References
 --------------
 
