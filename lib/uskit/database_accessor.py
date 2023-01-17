@@ -290,6 +290,9 @@ async def csvRow(filename, op):
 # FACTORY
 
 async def createDatabaseAccessor(cfgfile, dbfile, datafiles=[]):
+    """
+        Create a new database accessor.
+    """
     debug.info(f"Database {dbfile or 'in memory'} using config file '{cfgfile}'")
     dbexists = dbfile and os.path.exists(dbfile)
     db = DatabaseAccessor()

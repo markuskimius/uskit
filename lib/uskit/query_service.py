@@ -378,9 +378,8 @@ class QueryData(observable.Observable):
 
 async def createQueryService(db, cfgfile):
     """
-        A client request for a query over a query session.
+        Create a new query service.
     """
-
     with open(cfgfile) as fd:
         cfg = json.load(fd)
 

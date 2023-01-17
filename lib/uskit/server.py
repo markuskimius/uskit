@@ -101,5 +101,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 # FACTORY
 
 async def createServer(*args, **kwargs):
+    """
+        Create a new server.
+    """
     return Server(*args, **kwargs)
 

@@ -158,6 +158,9 @@ class TxnSession(observable.Observable):
 # FACTORY
 
 async def createTxnService(db, cfgfile):
+    """
+        Create a new transaction service.
+    """
     with open(cfgfile) as fd:
         cfg = json.load(fd)
 
