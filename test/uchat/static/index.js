@@ -1,5 +1,5 @@
-import * as uskit from "/ustatic/index.js";
-import * as debug from "/ustatic/debug.js";
+import * as uskit from "/uskit/index.js";
+import * as debug from "/uskit/debug.js";
 
 
 /* ***************************************************************************

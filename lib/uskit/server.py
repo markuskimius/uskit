@@ -19,9 +19,9 @@ __all__ = [
 class Server:
     def __init__(self, **kwargs):
         self.static = kwargs.get("static", "/static")
-        self.ustatic = kwargs.get("ustatic", "/ustatic")
         self.staticdir = kwargs.get("staticdir", os.path.join(globals.SCRIPTDIR, "static"))
-        self.ustaticdir = kwargs.get("ustaticdir", os.path.join(globals.MODULEDIR, "ustatic"))
+        self.uskit_static = kwargs.get("uskit-static", "/uskit")
+        self.uskit_staticdir = kwargs.get("uskit-staticdir", os.path.join(globals.MODULEDIR, "static"))
         self.servicesByPath = {}
 
     def route(self, path, service):
@@ -32,14 +32,14 @@ class Server:
 
     def listen(self, port, host="localhost"):
         app = tornado.web.Application([
-            (f"/()"                , UrlRedirectHandler           , {"target" : f"{self.static}/"}),
-            (f"{self.static}/()"   , tornado.web.StaticFileHandler, {"path" : os.path.join(self.staticdir, "index.html")}),
-            (f"{self.static}/(.+)" , tornado.web.StaticFileHandler, {"path" : self.staticdir}),
-            (f"{self.ustatic}/(.+)", tornado.web.StaticFileHandler, {"path" : self.ustaticdir}),
+            (f"/()"                     , UrlRedirectHandler           , {"target" : f"{self.static}/"}),
+            (f"{self.static}/()"        , tornado.web.StaticFileHandler, {"path" : os.path.join(self.staticdir, "index.html")}),
+            (f"{self.static}/(.+)"      , tornado.web.StaticFileHandler, {"path" : self.staticdir}),
+            (f"{self.uskit_static}/(.+)", tornado.web.StaticFileHandler, {"path" : self.uskit_staticdir}),
         ])
 
         debug.info(f"UserStaticPages at {self.static}")
-        debug.info(f"UskitStaticPages at {self.ustatic}")
+        debug.info(f"UskitStaticPages at {self.uskit_static}")
 
         # Add service routes
         for path, services in self.servicesByPath.items():

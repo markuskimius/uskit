@@ -18,7 +18,7 @@ extensions = [
     "sphinx_js",
 ]
 
-js_source_path = os.path.join("..", "lib", "uskit", "ustatic")
+js_source_path = os.path.join("..", "lib", "uskit", "uskit")
 
 if not os.environ.get("READTHEDOCS", None):
     import sphinx_rtd_theme
