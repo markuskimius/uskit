@@ -1,29 +1,17 @@
 import json
 from . import debug
+from . import query
+from . import errors
+from . import service
 from . import expression
-from . import exceptions
-from . import observable
-from . import query_accessor
 
 
 ##############################################################################
 # TXN SERVICE
 
+@service
 class TxnService:
-    def __init__(self, db, cfg):
-        self.db = db
-        self.cfg = cfg
-
-    async def __call__(self, session):
-        return TxnSession(session, self.db, self.cfg)
-
-
-##############################################################################
-# TXN SESSION
-
-class TxnSession(observable.Observable):
-    def __init__(self, session, db, cfg):
-        self.session = session
+    def __init__(self, cfg, db):
         self.db = db
         self.cfg = cfg
         self.isAllowed = None
@@ -47,25 +35,29 @@ class TxnSession(observable.Observable):
             for txnName in field["requiredBy"]:
                 self.specByField[txnfield]["requiredBy"][txnName] = True
 
-        # Observe messages
-        for txnName in self.cfg["operationByTxn"] :
-            self.session.addMessageObserver(txnName, self.__onTxn)
+    async def __call__(self, event):
+        self.session = event["session"]
 
-    async def permissionCheck(self, txn):
+        # Observe messages
+        for txnName in self.cfg["operationByTxn"]:
+            self.session.on(txnName, self.__on_txn)
+
+    async def check_perm(self, event):
         self.isAllowed = True
 
         if "allowWhere" in self.cfg:
             allowWhere = self.cfg["allowWhere"]
-            queryAccessor = query_accessor.QueryAccessor(self.db, allowWhere)
+            qry = query(self.db, allowWhere)
 
             self.isAllowed = False
 
-            async for row in queryAccessor(txn=txn):
+            async for row in qry(txn=event):
                 self.isAllowed = True
 
         return self.isAllowed
 
-    async def __onTxn(self, txn):
+    async def __on_txn(self, event):
+        txn = event.get("message", {})
         txnName = txn.get("MESSAGE_TYPE")
         content = txn.get("CONTENT", {})
         reply = {
@@ -75,7 +67,7 @@ class TxnSession(observable.Observable):
 
         # Permission check
         if self.isAllowed is None:
-            await self.permissionCheck(txn)
+            await self.check_perm(event)
 
         if self.isAllowed:
             records = []
@@ -93,11 +85,11 @@ class TxnSession(observable.Observable):
                         dbfield = txnspec["dbfield"]
 
                         if "sourceExpr" in txnspec:
-                            dbvalue = txnspec["sourceExpr"](txn=txn)
+                            dbvalue = txnspec["sourceExpr"](txn=event)
                         elif name in contentRow:
                             dbvalue = contentRow[name]
                         elif txnName in txnspec["requiredBy"]:
-                            raise TxnMissingRequired(f"{txnName} requires {name}")
+                            raise errors.TxnMissingRequired(f"{txnName} requires {name}")
                         else:
                             continue
 
@@ -121,9 +113,9 @@ class TxnSession(observable.Observable):
                 if nackcount:
                     reply.update({
                         "MESSAGE_TYPE" : f"{txnName}_NACK",
-                        "EXCEPTION"    : {
-                            "ERROR_CODE" : "XIGN",
-                            "ERROR_TEXT" : f"{nackcount} of {len(records)} transaction(s) ignored.",
+                        "ERROR"        : {
+                            "CODE" : "XIGN",
+                            "TEXT" : f"{nackcount} of {len(records)} transaction(s) ignored.",
                         }
                     })
 
@@ -132,21 +124,21 @@ class TxnSession(observable.Observable):
                         "MESSAGE_TYPE" : f"{txnName}_ACK",
                     })
 
-            except exceptions.UskitException as e:
+            except errors.Error as e:
                 reply.update({
                     "MESSAGE_TYPE" : f"{txnName}_NACK",
-                    "EXCEPTION"    : {
-                        "ERROR_CODE" : e.code,
-                        "ERROR_TEXT" : e.text,
+                    "ERROR"        : {
+                        "CODE" : e.code,
+                        "TEXT" : e.text,
                     }
                 })
 
         else:
             reply.update({
                 "MESSAGE_TYPE" : f"{txnName}_NACK",
-                "EXCEPTION"    : {
-                    "ERROR_CODE" : "XPRM",
-                    "ERROR_TEXT" : "Transaction not allowed",
+                "ERROR"        : {
+                    "CODE" : "XPRM",
+                    "TEXT" : "Transaction not allowed",
                 }
             })
 
@@ -157,12 +149,9 @@ class TxnSession(observable.Observable):
 ##############################################################################
 # FACTORY
 
-async def createTxnService(db, cfgfile):
-    """
-        Create a new transaction service.
-    """
+def txn_service(cfgfile, db):
     with open(cfgfile) as fd:
         cfg = json.load(fd)
 
-    return TxnService(db, cfg)
+    return TxnService(cfg, db)
 

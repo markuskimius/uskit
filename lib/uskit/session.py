@@ -2,82 +2,103 @@ import json
 import asyncio
 from . import util
 from . import debug
-from . import exceptions
-from . import abstract_session
+from . import errors
+from . import event_manager
 from tornado.websocket import WebSocketClosedError
 
 
 ##############################################################################
 # SESSION
 
-class Session(abstract_session.AbstractSession):
-    __sessionId = 0
+class Session:
+    sessionId = 0
 
-    def __init__(self, wshandler):
-        super().__init__(None)
+    def __init__(self, websocket):
+        self.websocket = websocket
+        self.sessionId = Session.sessionId
+        self.eventManager = event_manager.event_manager()
 
-        self.wshandler = wshandler
-        self.sessionId = Session.__sessionId
+        Session.sessionId += 1
 
-        Session.__sessionId += 1
+        self.websocket.on("open", self.__on_open)
+        self.websocket.on("close", self.__on_close)
+        self.websocket.on("data", self.__on_data)
 
-    async def _onOpen(self):
+    def on(self, type, handler):
+        self.eventManager.on(type, handler)
+
+    async def __on_open(self, event):
         debug.info(f"websocket open (sessionId={self.sessionId})")
 
-        await super().notifyEventObservers(self, "open")
+        await self.eventManager.trigger(event)
 
-    async def _onClose(self):
+    async def __on_close(self, event):
         debug.info(f"websocket closed (sessionId={self.sessionId})")
 
-        await super().notifyEventObservers(self, "close")
+        await self.eventManager.trigger(event)
 
-    async def _onData(self, data):
+    async def __on_data(self, event):
+        data = event["data"]
+
         try:
             message = json.loads(data)
+            type = message.get("MESSAGE_TYPE")
+            debug.socket(f"RX (sessionId={self.sessionId}):", json.dumps(message, indent=2, default=str))
 
-            await self.notifyMessageObservers(message)
+            count = await self.eventManager.trigger({
+                "type"    : type,
+                "message" : message,
+            })
+
+            if count == 0:
+                await self.__on_nohandler(message)
 
         except json.decoder.JSONDecodeError:
             debug.error(f"RX BAD (sessionId={self.sessionId}):", data)
+            await self.__on_baddata(event)
 
-            await self.send({
-                "MESSAGE_TYPE" : "NACK",
-                "EXCEPTION"    : {
-                    "ERROR_CODE" : "XJSN",
-                    "ERROR_TEXT" : f"Invalid JSON: '{data}'",
-                },
-            })
+    async def __on_baddata(self, event):
+        data = event["data"]
 
-    async def notifyMessageObservers(self, message, *args, **kwargs):
-        debug.socket(f"RX (sessionId={self.sessionId}):", json.dumps(message, indent=2, default=str))
-
-        count = await super().notifyMessageObservers(message, *args, **kwargs)
-
-        if count == 0:
-            msgtype = message.get("MESSAGE_TYPE")
-
-            await self.send({
-                "MESSAGE_TYPE"  : "NACK",
-                "REPLY_TO_TYPE" : msgtype,
-                "REPLY_TO_ID"   : message.get("MESSAGE_ID"),
-                "EXCEPTION"     : {
-                    "ERROR_CODE" : "XTYP",
-                    "ERROR_TEXT" : f"Unknown message type: '{msgtype}'",
-                },
-            })
-
-    async def send(self, message):
-        message = message.copy()
-        message.update({
-            "TIMESTAMP" : util.nowstring(),
+        await self.send({
+            "MESSAGE_TYPE" : "NACK",
+            "ERROR"        : {
+                "CODE" : "XJSN",
+                "TEXT" : f"Invalid JSON: '{data}'",
+            },
         })
 
+    async def __on_nohandler(self, message):
+        type = message.get("MESSAGE_TYPE")
+
+        await self.send({
+            "MESSAGE_TYPE"  : "NACK",
+            "REPLY_TO_TYPE" : type,
+            "REPLY_TO_ID"   : message.get("MESSAGE_ID"),
+            "ERROR"         : {
+                "CODE" : "XTYP",
+                "TEXT" : f"Unknown message type: '{type}'",
+            },
+        })
+
+    async def send(self, message):
+        message = message | {
+            "TIMESTAMP" : util.nowstring(),
+        }
+
         try:
-            await self.wshandler.write_message(json.dumps(message, default=str))
+            await self.websocket.write_message(json.dumps(message, default=str))
             debug.socket(f"TX (sessionId={self.sessionId}):", json.dumps(message, indent=2, default=str))
         except WebSocketClosedError as e:
             debug.warning(f"TX FAIL (sessionId={self.sessionId})", json.dumps(message, indent=2, default=str))
-            raise exceptions.SessionClosedException(str(e))
+            raise errors.SessionClosedError(str(e))
         except e:
-            raise exceptions.SessionException(str(e))
+            raise errors.SessionError(str(e))
+
+
+##############################################################################
+# FACTORY
+
+def session(websocket):
+    return Session(websocket)
 

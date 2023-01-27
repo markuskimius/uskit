@@ -1,8 +1,8 @@
 *.db
-*.swp
-*.swo
 *.egg-info
+*.swo
+*.swp
+.DS_Store
 __pycache__
 build
 dist
-doc

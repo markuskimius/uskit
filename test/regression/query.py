@@ -12,12 +12,11 @@ lastrow = None
 
 
 async def main():
-    with open("test_query.json") as fd:
+    with open("test-query.json") as fd:
         queryCfg = json.load(fd)
 
-    db = await uskit.createDb("test.db", "test-db.json", ["test-db.csv"])
+    db = await uskit.database("./test-db.json", datafiles=["test-db.csv"])
     query = uskit.Query(db, queryCfg["joinspec"], queryCfg["fields"])
-    aquery = uskit.Query(db, queryCfg["allowWhere"])
     admin = { "USER_NAME" : "admin" }
     user = { "USER_NAME" : "Alice" }
 
@@ -32,9 +31,6 @@ async def main():
     await test(query, "WHERE"            , where="m.USER_ID=2")
     await test(query, "WHERE + MAXCOUNT" , where="m.USER_ID=2"      , maxcount=1)
     await test(query, "WHERE + LASTROW"  , where="m.USER_ID=2"      , lastrow=lastrow)
-
-    await test(aquery, "AUTH ADMIN"      , login=admin)
-    await test(aquery, "AUTH USER"       , login=user)
 
     await db.close()
 

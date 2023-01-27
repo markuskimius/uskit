@@ -1,37 +1,35 @@
 import os
 import csv
 import json
-import weakref
 import asyncio
 import aiosqlite
-from . import debug
 from . import util
-from . import globals
-from . import exceptions
-from . import observable
+from . import debug
+from . import errors
+from . import event_manager
 from . import dynamic_record
 
 
 ##############################################################################
-# DATABASE ACCESSOR
+# DATABASE
 
-class DatabaseAccessor:
+class Database:
     def __init__(self):
         self.cfg = {}
         self.dbconn = None
-        self.observable = observable.Observable()
+        self.eventManager = event_manager.event_manager()
         self.dynamicRecordManager = dynamic_record.DynamicRecordManager(self)
-        self.operationId = 0
+        self.txnId = 0
 
         # Open the default config
-        with open(os.path.join(globals.MODULEDIR, "database_accessor.json")) as fd:
+        with open(os.path.join(util.MODULEDIR, "database.json")) as fd:
             self.cfg = json.load(fd)
 
     def keyfields(self, table):
         return self.cfg["keyfieldsByTable"][table]
 
-    def addTableEventObserver(self, table, event, observer):
-        self.observable.addEventObserver(f"{event}|{table}", observer)
+    def on(self, op, table, handler):
+        self.eventManager.on(f"{op}|{table}", handler)
 
     async def open(self, dbfile=None, cfg={}):
         self.dbconn = await aiosqlite.connect(dbfile or ":memory:")
@@ -115,7 +113,7 @@ class DatabaseAccessor:
         except aiosqlite.Error as e:
             debug.error(f"Database.select()", f"{str(e)}", sqlstmt, args)
 
-            raise exceptions.DatabaseException(str(e))
+            raise errors.DatabaseError(str(e))
 
     async def transact(self, txns):
         reply = []
@@ -131,7 +129,7 @@ class DatabaseAccessor:
                 if   operation == "insert" : reply += [await self.insert(table, record, commit=False)]
                 elif operation == "update" : reply += [await self.update(table, record, commit=False)]
                 elif operation == "delete" : reply += [await self.delete(table, record, commit=False)]
-                else                       : raise exceptions.DatabaseException(f"{operation}: Invalid operation")
+                else                       : raise errors.DatabaseError(f"{operation}: Invalid operation")
 
             await self.dbconn.execute("commit transaction")
 
@@ -169,7 +167,7 @@ class DatabaseAccessor:
         values = record.values()
         statements = [f"{n}=?" for n in names]
 
-        keynames = self.keyfields(table)
+        keynames = self.cfg["keyfieldsByTable"][table]
         keyvalues = [record[kn] for kn in keynames]
         conditions = [f"{n}=?" for n in keynames]
 
@@ -200,14 +198,20 @@ class DatabaseAccessor:
         return await self.__operate("delete", table, record, sqlstmt, list(values), **kwargs)
 
     async def __operate(self, operation, table, record, sqlstmt, args, **kwargs):
-        resultrow = {}
+        result = {}
         rowid = None
         txnd = False
 
         # Pre-transaction
-        self.operationId += 1
+        self.txnId += 1
         debug.database(sqlstmt, args)
-        await self.observable.notifyEventObservers(f"pre{operation}|{table}", table, record, operationId=self.operationId)
+        await self.eventManager.trigger({
+            "type"      : f"pre{operation}|{table}",
+            "operation" : f"pre{operation}",
+            "table"     : table,
+            "record"    : record,
+            "txnId"     : self.txnId,
+        })
 
         # Transaction
         try:
@@ -217,24 +221,31 @@ class DatabaseAccessor:
                         if name == "__rowid__":
                             rowId = row[name]
                         else:
-                            resultrow[name] = row[name]
+                            result[name] = row[name]
 
             if kwargs.get("commit", True):
                 await self.dbconn.commit()
 
         except aiosqlite.IntegrityError as e:
-            raise exceptions.DatabaseIntegrityException(str(e))
+            raise errors.DatabaseIntegrityError(str(e))
 
         except aiosqlite.OperationalError as e:
             debug.error(f"Database.{operation}()", f"{str(e)}", sqlstmt, args)
-            raise exceptions.DatabaseOperationalException(str(e))
+            raise errors.DatabaseOperationalError(str(e))
 
         except aiosqlite.Error as e:
-            raise exceptions.DatabaseException(str(e))
+            raise errors.DatabaseError(str(e))
 
         # Post-transaction
-        if resultrow:
-            await self.observable.notifyEventObservers(f"{operation}|{table}", table, resultrow, operationId=self.operationId, rowId=rowId)
+        if result:
+            await self.eventManager.trigger({
+                "type"      : f"{operation}|{table}",
+                "operation" : operation,
+                "table"     : table,
+                "record"    : result,
+                "txnId"     : self.txnId,
+                "rowId"     : rowId,
+            })
             txnd = True
 
         return txnd
@@ -243,7 +254,7 @@ class DatabaseAccessor:
 ##############################################################################
 # CSV OPERATOR
 
-async def csvRow(filename, op):
+async def csvop(filename, rowHandler):
     debug.info(f"Loading into database: {filename}")
     header = []
 
@@ -278,35 +289,36 @@ async def csvRow(filename, op):
                 elif type == "s":
                     value = str(value)
                 else:
-                    raise DatabaseProgrammingException(f"{filename}: Invalid type in column {colname}")
+                    raise errors.DatabaseProgrammingError(f"{filename}: Invalid type in column {colname}")
 
                 records[table][colname] = value
 
             for (table,row) in records.items():
-                await op(table, row)
+                await rowHandler(table, row)
 
 
 ##############################################################################
 # FACTORY
 
-async def createDatabaseAccessor(cfgfile, dbfile, datafiles=[]):
-    """
-        Create a new database accessor.
-    """
-    debug.info(f"Database {dbfile or 'in memory'} using config file '{cfgfile}'")
+async def database(cfgfile=None, **kwargs):
+    db = Database()
+    dbfile = kwargs.get("dbfile")
+    datafiles = kwargs.get("datafiles", [])
     dbexists = dbfile and os.path.exists(dbfile)
-    db = DatabaseAccessor()
+
+    debug.info(f"Database {dbfile or 'in memory'} using config file '{cfgfile}'")
 
     # Open the database
-    with open(cfgfile) as fd:
-        cfg = json.load(fd)
+    if cfgfile is not None:
+        with open(cfgfile) as fd:
+            cfg = json.load(fd)
 
-        await db.open(dbfile, cfg)
+            await db.open(dbfile, cfg)
 
     # Load CSV file for a new database
     if not dbexists:
         for df in datafiles:
-            await csvRow(df, db.insert)
+            await csvop(df, db.insert)
 
     return db
 

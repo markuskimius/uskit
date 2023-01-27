@@ -1,16 +1,11 @@
 import os
-import json
 import asyncio
 import tornado.web
 import tornado.websocket
+from . import util
 from . import debug
-from . import globals
 from . import session
-
-__all__ = [
-    "Server",
-    "createServer",
-]
+from . import event_manager
 
 
 ##############################################################################
@@ -19,12 +14,12 @@ __all__ = [
 class Server:
     def __init__(self, **kwargs):
         self.static = kwargs.get("static", "/static")
-        self.staticdir = kwargs.get("staticdir", os.path.join(globals.SCRIPTDIR, "static"))
-        self.uskit_static = kwargs.get("uskit-static", "/uskit")
-        self.uskit_staticdir = kwargs.get("uskit-staticdir", os.path.join(globals.MODULEDIR, "static"))
+        self.staticdir = kwargs.get("staticdir", os.path.join(util.SCRIPTDIR, "static"))
+        self.uskitStatic = kwargs.get("uskit-static", "/uskit")
+        self.uskitStaticdir = kwargs.get("uskit-staticdir", os.path.join(util.MODULEDIR, "static"))
         self.servicesByPath = {}
 
-    def route(self, path, service):
+    def on(self, path, service):
         if path not in self.servicesByPath:
             self.servicesByPath[path] = []
 
@@ -32,14 +27,14 @@ class Server:
 
     def listen(self, port, host="localhost"):
         app = tornado.web.Application([
-            (f"/()"                     , UrlRedirectHandler           , {"target" : f"{self.static}/"}),
-            (f"{self.static}/()"        , tornado.web.StaticFileHandler, {"path" : os.path.join(self.staticdir, "index.html")}),
-            (f"{self.static}/(.+)"      , tornado.web.StaticFileHandler, {"path" : self.staticdir}),
-            (f"{self.uskit_static}/(.+)", tornado.web.StaticFileHandler, {"path" : self.uskit_staticdir}),
+            (f"/()"                    , UrlRedirectHandler           , {"target" : f"{self.static}/"}),
+            (f"{self.static}/()"       , tornado.web.StaticFileHandler, {"path" : os.path.join(self.staticdir, "index.html")}),
+            (f"{self.static}/(.+)"     , tornado.web.StaticFileHandler, {"path" : self.staticdir}),
+            (f"{self.uskitStatic}/(.+)", tornado.web.StaticFileHandler, {"path" : self.uskitStaticdir}),
         ])
 
         debug.info(f"UserStaticPages at {self.static}")
-        debug.info(f"UskitStaticPages at {self.uskit_static}")
+        debug.info(f"UskitStaticPages at {self.uskitStatic}")
 
         # Add service routes
         for path, services in self.servicesByPath.items():
@@ -58,9 +53,8 @@ class Server:
 
 class UrlRedirectHandler(tornado.web.RequestHandler):
     """
-        Used to redirect /index.html to /static/index.html.
+        Redirect /index.html to /static/index.html.
     """
-
     def initialize(self, target):
         self.target = target
 
@@ -73,36 +67,45 @@ class UrlRedirectHandler(tornado.web.RequestHandler):
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     """
-        Used to route JSON messages to services that can handle them.
+        Route JSON messages to services that can handle them.
     """
-
     def initialize(self, services):
-        self.session = session.Session(self)
+        self.eventManager = event_manager.event_manager()
+        self.session = session.session(self)
         self.init_tasks = []
+        event = {
+            "type"    : "session",
+            "session" : self.session,
+        }
 
         # Instantiate all services
         for service in services:
-            self.init_tasks += [service(self.session)]
+            self.init_tasks += [service(event)]
+
+    def on(self, type, handler):
+        self.eventManager.on(type, handler)
 
     async def open(self):
-        if self.init_tasks:
-            await asyncio.gather(*self.init_tasks)
-
-        await self.session._onOpen()
+        await asyncio.gather(*self.init_tasks)
+        await self.eventManager.trigger({
+            "type" : "open",
+        })
 
     def on_close(self):
-        asyncio.create_task(self.session._onClose())
+        asyncio.create_task(self.eventManager.trigger({
+            "type" : "close",
+        }))
 
     async def on_message(self, data):
-        await self.session._onData(data)
+        await self.eventManager.trigger({
+            "type" : "data",
+            "data" : data,
+        })
 
 
 ##############################################################################
 # FACTORY
 
-async def createServer(*args, **kwargs):
-    """
-        Create a new server.
-    """
-    return Server(*args, **kwargs)
+def server(**kwargs):
+    return Server(**kwargs)
 

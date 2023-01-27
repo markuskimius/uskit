@@ -2,85 +2,88 @@ import os
 import json
 import asyncio
 from . import debug
-from . import exceptions
-from . import observable
-from . import query_accessor
+from . import query
+from . import errors
+from . import service
+from . import event_manager
 
 
 ##############################################################################
 # QUERY SERVICE
 
 class QueryService:
-    def __init__(self, db, queryCfg):
+    def __init__(self, queryCfg, db):
         self.db = db
         self.queryCfg = queryCfg
         self.queryData = QueryData(db, queryCfg)
 
-    async def __call__(self, session):
-        return QuerySession(session, self.db, self.queryCfg, self.queryData)
+    async def __call__(self, event):
+        qsession = QuerySession(self.queryCfg, self.db, self.queryData)
+
+        await qsession(event)
+
+        return qsession
 
 
 ##############################################################################
 # QUERY SESSION
 
 class QuerySession:
-    """
-        Open session from the client to a query service.  Manage any query
-        request from the client.
-    """
-
     pid = os.getpid()
     qid = 0
 
-    @staticmethod
-    def __nextqid():
+    def nextqid(self):
         QuerySession.qid += 1
 
         return f"Q{QuerySession.pid}-{QuerySession.qid}"
 
-    def __init__(self, session, db, queryCfg, queryData):
-        self.session = session
+    def __init__(self, queryCfg, db, queryData):
         self.db = db
         self.queryCfg = queryCfg
-        self.queryData = queryData
         self.queryName = self.queryCfg.get("queryName")
         self.queryInstances = {}
+        self.queryData = queryData
 
-        self.session.addEventObserver("close", self.onClose)
-        self.session.addMessageObserver(f"{self.queryName}", self.onQuery)
-        self.session.addMessageObserver(f"{self.queryName}_NEXT", self.onQueryNext)
+    async def __call__(self, event):
+        self.session = event["session"]
 
-    async def onClose(self):
+        self.session.on(f"close", self.__on_close)
+        self.session.on(f"{self.queryName}", self.__on_query)
+        self.session.on(f"{self.queryName}_NEXT", self.__on_next)
+
+    async def __on_close(self, event):
         tasks = []
 
         for queryInstance in self.queryInstances.values():
-            tasks += [queryInstance.onClose()]
+            tasks += [queryInstance.on_close(event)]
 
         if tasks:
             await asyncio.gather(*tasks)
 
         self.queryInstances = {}
 
-    async def onQuery(self, message):
+    async def __on_query(self, event):
+        message = event["message"]
         messageId = message.get("MESSAGE_ID", "0");
-        queryId = f"{QuerySession.__nextqid()}|{messageId}"
+        queryId = f"{self.nextqid()}|{messageId}"
         queryInstance = QueryInstance(self, self.queryData, self.queryCfg, queryId, self.db)
 
         self.queryInstances[queryId] = queryInstance
 
-        await queryInstance.onQuery(message)
+        await queryInstance.on_query(event)
 
-    async def onQueryNext(self, message):
+    async def __on_next(self, event):
+        message = event["message"]
         queryId = message.get("CONTENT", {}).get("QUERY_ID")
 
         if queryId in self.queryInstances:
-            await self.queryInstances[queryId].onQueryNext(message)
+            await self.queryInstances[queryId].__on_next(event)
         else:
             await self.session.send({
                 "MESSAGE_TYPE" : f"{self.queryName}_NACK",
-                "EXCEPTION"    : {
-                    "ERROR_CODE" : "XQID",
-                    "ERROR_TEXT" : f"Invalid query ID: {queryId}",
+                "ERROR"        : {
+                    "CODE" : "XQID",
+                    "TEXT" : f"Invalid query ID: {queryId}",
                 },
             })
 
@@ -111,16 +114,17 @@ class QueryInstance:
         self.lastrow = {}
         self.queueByRowId = {}
 
-        self.queryData.addEventObserver("insert", self.onInsert)
-        self.queryData.addEventObserver("update", self.onUpdate)
-        self.queryData.addEventObserver("delete", self.onDelete)
+        self.queryData.on("insert", self.__on_insert)
+        self.queryData.on("update", self.__on_update)
+        self.queryData.on("delete", self.__on_delete)
 
-    async def onClose(self):
-        self.queryData.removeEventObserver("insert", self.onInsert)
-        self.queryData.removeEventObserver("update", self.onUpdate)
-        self.queryData.removeEventObserver("delete", self.onDelete)
+    async def on_close(self, event):
+        self.queryData.off("insert", self.__on_insert)
+        self.queryData.off("update", self.__on_update)
+        self.queryData.off("delete", self.__on_delete)
 
-    async def onQuery(self, message):
+    async def on_query(self, event):
+        message = event["message"]
         queryName = self.queryCfg.get("queryName")
         allowQuery = True
 
@@ -128,7 +132,7 @@ class QueryInstance:
         if "allowWhere" in self.queryCfg:
             allowQuery = False
 
-            async for row in query_accessor.QueryAccessor(self.db, self.queryCfg["allowWhere"])(query=message):
+            async for row in query(self.db, self.queryCfg["allowWhere"])(query=event):
                 allowQuery = True
                 break
 
@@ -143,37 +147,41 @@ class QueryInstance:
                 },
             })
 
-            await self.onQueryNext(message)
+            await self.__on_next(event)
         else:
             await self.__send({
                 "MESSAGE_TYPE" : f"{queryName}_NACK",
                 "REPLY_TO_ID"  : message.get("MESSAGE_ID"),
-                "EXCEPTION"    : {
-                    "ERROR_CODE" : "XPRM",
-                    "ERROR_TEXT" : "Query not allowed",
+                "ERROR"        : {
+                    "CODE" : "XPRM",
+                    "TEXT" : "Query not allowed",
                 },
             })
 
-            await self.onClose()
+            await self.on_close(event)
 
-    async def onQueryNext(self, message, **kwargs):
+    async def __on_next(self, event):
+        message = event["message"]
         self.maxcount = message.get("CONTENT", {}).get("MAXCOUNT", self.maxcount)
 
         async for row in self.queryData.query(lastrow=self.lastrow, maxcount=self.maxcount):
             self.__pushQueue("INSERT", row)
             self.lastrow = row
 
-        await self.__sendQueue(message=message, **kwargs)
+        await self.__sendQueue(message=message)
 
-    async def onInsert(self, row):
+    async def __on_insert(self, event):
+        row = event["row"]
         self.__pushQueue("INSERT", row)
         await self.__sendQueue()
 
-    async def onUpdate(self, row):
+    async def __on_update(self, event):
+        row = event["row"]
         self.__pushQueue("UPDATE", row)
         await self.__sendQueue()
 
-    async def onDelete(self, row):
+    async def __on_delete(self, event):
+        row = event["row"]
         self.__pushQueue("DELETE", row)
         await self.__sendQueue()
 
@@ -253,14 +261,16 @@ class QueryInstance:
 
         try:
             await self.querySession.send(message)
-        except exceptions.SessionClosedException as e:
-            await self.onClose()
+        except errors.SessionClosedError as e:
+            await self.on_close({
+                "type" : "close",
+            })
 
 
 ##############################################################################
 # QUERY DATA
 
-class QueryData(observable.Observable):
+class QueryData:
     """
         Store data that a client may request in a format appropriate for a
         query response.
@@ -270,7 +280,8 @@ class QueryData(observable.Observable):
         super().__init__()
 
         self.db = db
-        self.query = query_accessor.QueryAccessor(db, queryCfg["joinspec"], queryCfg["fields"])
+        self.query = query(db, queryCfg["joinspec"], queryCfg["fields"])
+        self.eventManager = event_manager.event_manager()
         self.schema = []
         self.aliasByTable = {}
         self.rowsByTxnId = {}
@@ -295,31 +306,41 @@ class QueryData(observable.Observable):
 
         # Observe changes to key tables
         for table in self.aliasByTable.keys():
-            self.db.addTableEventObserver(table, "insert", self.onTxn)
-            self.db.addTableEventObserver(table, "update", self.onTxn)
-            self.db.addTableEventObserver(table, "delete", self.onTxn)
-            self.db.addTableEventObserver(table, "preinsert", self.onPreTxn)
-            self.db.addTableEventObserver(table, "preupdate", self.onPreTxn)
-            self.db.addTableEventObserver(table, "predelete", self.onPreTxn)
+            self.db.on("insert", table, self.__on_txn)
+            self.db.on("update", table, self.__on_txn)
+            self.db.on("delete", table, self.__on_txn)
+            self.db.on("preinsert", table, self.__on_pretxn)
+            self.db.on("preupdate", table, self.__on_pretxn)
+            self.db.on("predelete", table, self.__on_pretxn)
 
-    async def onPreTxn(self, table, record, **kwargs):
+    def on(self, type, handler):
+        self.eventManager.on(type, handler)
+
+    def off(self, type, handler):
+        self.eventManager.off(type, handler)
+
+    async def __on_pretxn(self, event):
         """
             Before committing a txn, get the list of possible rows that will be
             affected by this txn so we can compare the results after the
             commit.
         """
+        txnId = event.get("txnId")
+        table = event.get("table")
+        record = event.get("record")
         rows = await self.__rowsByTable(table, record)
-        txnId = kwargs.get("txnId")
 
         self.rowsByTxnId[txnId] = rows
 
-    async def onTxn(self, table, record, **kwargs):
+    async def __on_txn(self, event):
         """
             After committing a txn, get the list of rows that may have been
             affected by this txn.  Compare them to rows from before the commit
             and notify delta to the observers.
         """
-        txnId = kwargs.get("txnId")
+        txnId = event.get("txnId")
+        table = event.get("table")
+        record = event.get("record")
         oldrows = self.rowsByTxnId[txnId]
         newrows = await self.__rowsByTable(table, record)
         insert = []
@@ -329,13 +350,22 @@ class QueryData(observable.Observable):
 
         for rowid,row in oldrows.items():
             if rowid not in newrows:
-                tasks += [self.notifyEventObservers(f"delete", row)]
+                tasks += [self.eventManager.trigger({
+                    "type" : "delete",
+                    "row"  : row,
+                })]
 
         for rowid,row in newrows.items():
             if rowid not in oldrows:
-                tasks += [self.notifyEventObservers(f"insert", row)]
+                tasks += [self.eventManager.trigger({
+                    "type" : "insert",
+                    "row"  : row,
+                })]
             elif rowid in newrows and oldrows[rowid] != newrows[rowid]:
-                tasks += [self.notifyEventObservers(f"update", row)]
+                tasks += [self.eventManager.trigger({
+                    "type" : "update",
+                    "row"  : row,
+                })]
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -376,12 +406,9 @@ class QueryData(observable.Observable):
 ##############################################################################
 # FACTORY
 
-async def createQueryService(db, cfgfile):
-    """
-        Create a new query service.
-    """
+def query_service(cfgfile, db):
     with open(cfgfile) as fd:
         cfg = json.load(fd)
 
-    return QueryService(db, cfg)
+    return QueryService(cfg, db)
 

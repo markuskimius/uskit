@@ -35,6 +35,9 @@ def database(*args, **kwargs):
 def debug(*args, **kwargs):
     stack = ""
 
+    if sys.stderr.isatty():
+        sys.stderr.write("\033[1;35m")
+
     for frame in inspect.stack()[1:]:
         filepath = frame[1]
         lineno = frame[2]
@@ -43,6 +46,9 @@ def debug(*args, **kwargs):
         stack += f"\n    at {filepath} line {lineno} in {func}()"
 
     log("DEBUG", *args, stack, **kwargs)
+
+    if sys.stderr.isatty():
+        sys.stderr.write("\33[0m")
 
 def trace(*args, **kwargs):
     frame = inspect.stack()[1]

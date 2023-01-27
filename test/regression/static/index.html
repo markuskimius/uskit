@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Test</title>
+    </head>
+    <body>
+        <button onclick="do_txn()">Txn</button>
+        <button onclick="do_query()">Query</button>
+
+        <script>
+            let websocket = null;
+            let messageId = 0;
+
+            function main() {
+                websocket = new WebSocket("ws://localhost:8080/regression");
+
+                websocket.addEventListener("open", (event) => on_open(event));
+                websocket.addEventListener("close", (event) => on_close(event));
+                websocket.addEventListener("message", (event) => on_message(event));
+            }
+
+            function on_open(event) {
+                console.log("open");
+            }
+
+            function on_close(event) {
+                console.log("closed");
+            }
+
+            function on_message(event) {
+                console.log("data:", event.data);
+            }
+
+            function do_txn(event) {
+                websocket.send(JSON.stringify({
+                    "MESSAGE_TYPE" : "TXN_CHAT",
+                    "MESSAGE_ID"   : ++messageId,
+                    "CONTENT"      : [{
+                        "USER_ID"      : 1,
+                        "MESSAGE_TEXT" : "Hello, world!",
+                    }]
+                }))
+            }
+
+            function do_query(event) {
+                websocket.send(JSON.stringify({
+                    "MESSAGE_TYPE" : "CHAT_QUERY",
+                }))
+            }
+
+            main();
+        </script>
+    </body>
+</html>

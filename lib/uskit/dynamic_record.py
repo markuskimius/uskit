@@ -18,13 +18,13 @@ class DynamicRecord(dict):
 # DYNAMIC RECORD MANAGER
 
 class DynamicRecordManager:
-    def __init__(self, dbAccessor):
-        self.dbAccessor = dbAccessor
+    def __init__(self, db):
+        self.db = db
         self.recordByKey = weakref.WeakValueDictionary()
         self.observingTables = {}
 
     async def create(self, table, record):
-        key = tuple([table] + [record.get(f) for f in self.dbAccessor.keyfields(table)])
+        key = tuple([table] + [record.get(f) for f in self.db.keyfields(table)])
 
         """
             The record is watched and updated live for as long as there are
@@ -35,9 +35,9 @@ class DynamicRecordManager:
         # Observe this table
         if table not in self.observingTables:
             self.observingTables[table] = True
-            self.dbAccessor.addTableEventObserver(table, "insert", self.__onInsert)
-            self.dbAccessor.addTableEventObserver(table, "update", self.__onUpdate)
-            self.dbAccessor.addTableEventObserver(table, "delete", self.__onDelete)
+            self.db.on("insert", table, self.__on_insert)
+            self.db.on("update", table, self.__on_update)
+            self.db.on("delete", table, self.__on_delete)
 
         # Add the record to the WeakValueDictionary
         if key in self.recordByKey:
@@ -53,27 +53,33 @@ class DynamicRecordManager:
 
         return self.recordByKey[key]
 
-    async def __onInsert(self, table, record, **kwargs):
-        key = tuple([table] + [record.get(f) for f in self.dbAccessor.keyfields(table)])
+    async def __on_insert(self, event):
+        table = event["table"]
+        record = event["record"]
+        key = tuple([table] + [record.get(f) for f in self.db.keyfields(table)])
 
         if key in self.recordByKey:
-            debug.database("DynamicRecordManager.__onInsert", table, record)
+            debug.database("DynamicRecordManager.__on_insert", table, record)
 
             self.recordByKey[key].update(record)
 
-    async def __onUpdate(self, table, record, **kwargs):
-        key = tuple([table] + [record.get(f) for f in self.dbAccessor.keyfields(table)])
+    async def __on_update(self, event):
+        table = event["table"]
+        record = event["record"]
+        key = tuple([table] + [record.get(f) for f in self.db.keyfields(table)])
 
         if key in self.recordByKey:
-            debug.database("DynamicRecordManager.__onUpdate", table, record)
+            debug.database("DynamicRecordManager.__on_update", table, record)
 
             self.recordByKey[key].update(record)
 
-    async def __onDelete(self, table, record, **kwargs):
-        key = tuple([table] + [record.get(f) for f in self.dbAccessor.keyfields(table)])
+    async def __on_delete(self, event):
+        table = event["table"]
+        record = event["record"]
+        key = tuple([table] + [record.get(f) for f in self.db.keyfields(table)])
 
         if key in self.recordByKey:
-            debug.database("DynamicRecordManager.__onDelete", table, record)
+            debug.database("DynamicRecordManager.__on_delete", table, record)
 
             self.recordByKey[key].clear()
 

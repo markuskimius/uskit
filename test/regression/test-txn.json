@@ -11,7 +11,7 @@
         },
         {
             "name"       : "USER_ID",
-            "source"     : "txn.auth.USER_ID",
+            "source"     : "txn.USER_ID",
             "target"     : "MESSAGE.USER_ID",
             "requiredBy" : [ "TXN_CHAT" ]
         }

@@ -1,3 +1,6 @@
+from . import debug
+
+
 ##############################################################################
 # EXPRESSION
 
@@ -10,10 +13,15 @@ class Expression:
         self.ast = expr.strip().split(".")
 
     def __call__(self, **kwargs):
-        for name in self.ast:
-            kwargs = kwargs.get(name)
+        value = kwargs
 
-        return kwargs
+        try:
+            for name in self.ast:
+                value = value.get(name)
+        except:
+            debug.debug(f"Field does not exist: {'.'.join(self.ast)} in {kwargs}")
+
+        return value
 
 
 ##############################################################################

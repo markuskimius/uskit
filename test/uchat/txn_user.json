@@ -32,7 +32,7 @@
             "table"       : "USER",
             "alias"       : "u",
             "where"       : "u.USER_NAME=? and u.USER_ROLE='ADMIN'",
-            "args"        : [ "txn.USER_NAME" ]
+            "args"        : [ "txn.auth.USER_NAME" ]
         }
     ]
 }

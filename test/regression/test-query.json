@@ -43,13 +43,5 @@
             "title"    : "User Name",
             "type"     : "text"
         }
-    ],
-    "allowWhere" : [
-        {
-            "table"    : "USER",
-            "alias"    : "u",
-            "where"    : "u.USER_NAME=? and u.USER_ROLE='ADMIN'",
-            "args"     : [ "login.USER_NAME" ]
-        }
     ]
 }

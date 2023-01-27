@@ -37,7 +37,7 @@
             "table"  : "USER",
             "alias"  : "u",
             "where"  : "u.USER_NAME=? and u.USER_ROLE='ADMIN'",
-            "args"   : [ "query.USER_NAME" ]
+            "args"   : [ "query.auth.USER_NAME" ]
         }
     ]
 }

@@ -4,9 +4,9 @@ from . import expression
 
 
 ##############################################################################
-# QUERY ACCESSOR
+# QUERY
 
-class QueryAccessor:
+class Query:
     def __init__(self, db, joinspec, fieldspec=[]):
         self.db = db
         self.sortfields = []
@@ -120,4 +120,11 @@ class QueryAccessor:
         # Select
         async for found in self.db.select(sql, args):
             yield found
+
+
+##############################################################################
+# FACTORY
+
+def query(*args, **kwargs):
+    return Query(*args, **kwargs)
 

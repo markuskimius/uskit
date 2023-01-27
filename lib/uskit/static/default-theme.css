@@ -53,9 +53,11 @@
         filter      : invert(100%);
     }
     to   {
+/*
         max-height  : 0;
         line-height : 0;
         font-size   : 0;
+*/
         opacity     : 0;
     }
 }
