@@ -11,7 +11,7 @@ from . import expression
 
 @service
 class TxnService:
-    def __init__(self, cfg, db):
+    def __init__(self, db, cfg):
         self.db = db
         self.cfg = cfg
         self.isAllowed = None
@@ -35,7 +35,13 @@ class TxnService:
             for txnName in field["requiredBy"]:
                 self.specByField[txnfield]["requiredBy"][txnName] = True
 
-    async def __call__(self, event):
+    async def trigger(self, event):
+        type = event["type"]
+
+        if   type == "session" : await self.__on_session(event)
+        else                   : debug.debug("Unhandled event", event)
+
+    async def __on_session(self, event):
         self.session = event["session"]
 
         # Observe messages
@@ -149,9 +155,9 @@ class TxnService:
 ##############################################################################
 # FACTORY
 
-def txn_service(cfgfile, db):
+def txn_service(db, cfgfile):
     with open(cfgfile) as fd:
         cfg = json.load(fd)
 
-    return TxnService(cfg, db)
+    return TxnService(db, cfg)
 

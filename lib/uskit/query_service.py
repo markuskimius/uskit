@@ -11,40 +11,30 @@ from . import event_manager
 ##############################################################################
 # QUERY SERVICE
 
+@service
 class QueryService:
-    def __init__(self, queryCfg, db):
-        self.db = db
-        self.queryCfg = queryCfg
-        self.queryData = QueryData(db, queryCfg)
-
-    async def __call__(self, event):
-        qsession = QuerySession(self.queryCfg, self.db, self.queryData)
-
-        await qsession(event)
-
-        return qsession
-
-
-##############################################################################
-# QUERY SESSION
-
-class QuerySession:
     pid = os.getpid()
     qid = 0
 
-    def nextqid(self):
-        QuerySession.qid += 1
+    def __nextqid(self):
+        QueryService.qid += 1
 
-        return f"Q{QuerySession.pid}-{QuerySession.qid}"
+        return f"Q{QueryService.pid}-{QueryService.qid}"
 
-    def __init__(self, queryCfg, db, queryData):
+    def __init__(self, db, queryData, queryCfg):
         self.db = db
         self.queryCfg = queryCfg
+        self.queryData = queryData
         self.queryName = self.queryCfg.get("queryName")
         self.queryInstances = {}
-        self.queryData = queryData
 
-    async def __call__(self, event):
+    async def trigger(self, event):
+        type = event["type"]
+
+        if   type == "session" : await self.__on_session(event)
+        else                   : debug.debug("Unhandled event", event)
+
+    async def __on_session(self, event):
         self.session = event["session"]
 
         self.session.on(f"close", self.__on_close)
@@ -55,7 +45,7 @@ class QuerySession:
         tasks = []
 
         for queryInstance in self.queryInstances.values():
-            tasks += [queryInstance.on_close(event)]
+            tasks += [queryInstance.trigger(event)]
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -65,19 +55,19 @@ class QuerySession:
     async def __on_query(self, event):
         message = event["message"]
         messageId = message.get("MESSAGE_ID", "0");
-        queryId = f"{self.nextqid()}|{messageId}"
+        queryId = f"{self.__nextqid()}|{messageId}"
         queryInstance = QueryInstance(self, self.queryData, self.queryCfg, queryId, self.db)
 
         self.queryInstances[queryId] = queryInstance
 
-        await queryInstance.on_query(event)
+        await queryInstance.trigger(event)
 
     async def __on_next(self, event):
         message = event["message"]
         queryId = message.get("CONTENT", {}).get("QUERY_ID")
 
         if queryId in self.queryInstances:
-            await self.queryInstances[queryId].__on_next(event)
+            await self.queryInstances[queryId].trigger(event)
         else:
             await self.session.send({
                 "MESSAGE_TYPE" : f"{self.queryName}_NACK",
@@ -102,9 +92,10 @@ class QueryInstance:
     STATE_SNAPSHOT = 0x01
     STATE_UPDATE   = 0x02
 
-    def __init__(self, querySession, queryData, queryCfg, queryId, db):
-        self.querySession = querySession
+    def __init__(self, queryService, queryData, queryCfg, queryId, db):
+        self.queryService = queryService
         self.queryData = queryData
+        self.queryName = queryCfg["queryName"]
         self.queryCfg = queryCfg
         self.queryId = queryId
         self.db = db
@@ -118,14 +109,22 @@ class QueryInstance:
         self.queryData.on("update", self.__on_update)
         self.queryData.on("delete", self.__on_delete)
 
-    async def on_close(self, event):
+    async def trigger(self, event):
+        type = event["type"]
+
+        if   type == "close"                  : await self.__on_close(event)
+        elif type == f"{self.queryName}"      : await self.__on_query(event)
+        elif type == f"{self.queryName}_NEXT" : await self.__on_next(event)
+        else                                  : debug.debug("Unhandled event", event)
+
+    async def __on_close(self, event):
         self.queryData.off("insert", self.__on_insert)
         self.queryData.off("update", self.__on_update)
         self.queryData.off("delete", self.__on_delete)
 
-    async def on_query(self, event):
+    async def __on_query(self, event):
         message = event["message"]
-        queryName = self.queryCfg.get("queryName")
+        queryName = self.queryName
         allowQuery = True
 
         # Permission check
@@ -158,34 +157,34 @@ class QueryInstance:
                 },
             })
 
-            await self.on_close(event)
+            await self.__on_close(event)
 
     async def __on_next(self, event):
         message = event["message"]
         self.maxcount = message.get("CONTENT", {}).get("MAXCOUNT", self.maxcount)
 
         async for row in self.queryData.query(lastrow=self.lastrow, maxcount=self.maxcount):
-            self.__pushQueue("INSERT", row)
+            self.__push_queue("INSERT", row)
             self.lastrow = row
 
-        await self.__sendQueue(message=message)
+        await self.__send_queue(message=message)
 
     async def __on_insert(self, event):
         row = event["row"]
-        self.__pushQueue("INSERT", row)
-        await self.__sendQueue()
+        self.__push_queue("INSERT", row)
+        await self.__send_queue()
 
     async def __on_update(self, event):
         row = event["row"]
-        self.__pushQueue("UPDATE", row)
-        await self.__sendQueue()
+        self.__push_queue("UPDATE", row)
+        await self.__send_queue()
 
     async def __on_delete(self, event):
         row = event["row"]
-        self.__pushQueue("DELETE", row)
-        await self.__sendQueue()
+        self.__push_queue("DELETE", row)
+        await self.__send_queue()
 
-    def __pushQueue(self, operation, row):
+    def __push_queue(self, operation, row):
         rowid = row["__rowid__"]
 
         if rowid in self.queueByRowId:
@@ -204,7 +203,7 @@ class QueryInstance:
         else:
             self.queueByRowId[rowid] = (operation, row)
 
-    async def __sendQueue(self, **kwargs):
+    async def __send_queue(self, **kwargs):
         # A message is sent if the queue has any data, or if this is a snapshot reply
         if self.queueByRowId or QueryInstance.STATE_SNAPSHOT:
             queryName = self.queryCfg.get("queryName")
@@ -260,9 +259,9 @@ class QueryInstance:
         """
 
         try:
-            await self.querySession.send(message)
+            await self.queryService.send(message)
         except errors.SessionClosedError as e:
-            await self.on_close({
+            await self.__on_close({
                 "type" : "close",
             })
 
@@ -277,14 +276,12 @@ class QueryData:
     """
 
     def __init__(self, db, queryCfg):
-        super().__init__()
-
         self.db = db
         self.query = query(db, queryCfg["joinspec"], queryCfg["fields"])
         self.eventManager = event_manager.event_manager()
-        self.schema = []
         self.aliasByTable = {}
         self.rowsByTxnId = {}
+        self.schema = []
 
         # Schema
         for spec in queryCfg["fields"]:
@@ -328,7 +325,7 @@ class QueryData:
         txnId = event.get("txnId")
         table = event.get("table")
         record = event.get("record")
-        rows = await self.__rowsByTable(table, record)
+        rows = await self.__rows_by_table(table, record)
 
         self.rowsByTxnId[txnId] = rows
 
@@ -342,7 +339,7 @@ class QueryData:
         table = event.get("table")
         record = event.get("record")
         oldrows = self.rowsByTxnId[txnId]
-        newrows = await self.__rowsByTable(table, record)
+        newrows = await self.__rows_by_table(table, record)
         insert = []
         delete = []
         update = []
@@ -372,7 +369,7 @@ class QueryData:
 
         del self.rowsByTxnId[txnId]
 
-    async def __rowsByTable(self, table, record):
+    async def __rows_by_table(self, table, record):
         """
             Return the query result rows that include a record or its absence.
             The return result is keyed by the rowid.
@@ -406,9 +403,12 @@ class QueryData:
 ##############################################################################
 # FACTORY
 
-def query_service(cfgfile, db):
+def query_service(db, cfgfile):
     with open(cfgfile) as fd:
-        cfg = json.load(fd)
+        queryCfg = json.load(fd)
 
-    return QueryService(cfg, db)
+    queryData = QueryData(db, queryCfg)
+    queryManager = QueryService(db, queryData, queryCfg)
+
+    return queryManager
 

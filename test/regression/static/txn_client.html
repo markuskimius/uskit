@@ -43,7 +43,8 @@
             async function test_submit(event) {
                 const text = document.querySelector("#message-text").value;
 
-                await txn_client.on_submit({
+                await txn_client.trigger({
+                    "type"    : "submit",
                     "content" : {
                         "USER_ID"      : 1,
                         "MESSAGE_TEXT" : text,

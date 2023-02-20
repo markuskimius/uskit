@@ -12,7 +12,7 @@ async def main():
     server = uskit.server()
     service = Service()
 
-    server.on("/regression", service)
+    server.on("/regression", lambda event : service.trigger(event))
 
     # Listen for connections
     server.listen(8080)
@@ -23,8 +23,8 @@ async def main():
 
 @uskit.service
 class Service:
-    async def __call__(self, event):
-        print("call", event)
+    async def trigger(self, event):
+        print("trigger", event)
 
 
 os.chdir(SCRIPTDIR)

@@ -4,7 +4,7 @@ from . import event_manager
 ##############################################################################
 # FACTORY
 
-def service(ServiceSession):
+def service(Service):
     class MetaService(type):
         """
             Normally you can't access the static variable of a decorated class.
@@ -14,22 +14,31 @@ def service(ServiceSession):
             @see https://stackoverflow.com/a/47892880/20025913
         """
         def __getattr__(self, attr):
-            return getattr(ServiceSession, attr)
+            return getattr(Service, attr)
 
         def __setattr__(self, attr, value):
-            return setattr(ServiceSession, attr, value)
+            return setattr(Service, attr, value)
 
-    class Service(metaclass=MetaService):
+    class ServiceManager(metaclass=MetaService):
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
             self.eventManager = event_manager.event_manager()
 
-        async def __call__(self, event):
-            instance = ServiceSession(*self.args, **self.kwargs)
+        def on(self, type, handler):
+            self.eventManager.on(type, handler)
+
+        async def trigger(self, event):
+            type = event["type"]
+
+            if   type == "session" : await self.__on_session(event)
+            else                   : debug.debug("Unhandled event", event)
+
+        async def __on_session(self, event):
+            instance = Service(*self.args, **self.kwargs)
 
             # Instantiate service session
-            await instance(event)
+            await instance.trigger(event)
 
             # Let listeners know I'm instantiated
             await self.eventManager.trigger(event | {
@@ -39,8 +48,5 @@ def service(ServiceSession):
 
             return instance
 
-        def on(self, type, handler):
-            self.eventManager.on(type, handler)
-
-    return Service
+    return ServiceManager
 

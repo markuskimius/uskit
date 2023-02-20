@@ -19,6 +19,7 @@ fi
 
 import uskit
 import asyncio
+from uskit import debug
 
 __copyright__ = "Copyright 2022-2023 Mark Kim"
 __license__ = "Apache 2.0"
@@ -32,17 +33,17 @@ async def main():
     db = await uskit.database("./uchat-db.json", dbfile="./uchat.db", datafiles=["./uchat-db.csv"])
     server = uskit.server()
     login = LoginProxy(db)
-    userTxn = uskit.txn_service("./txn_user.json", db)
-    chatTxn = uskit.txn_service("./txn_chat.json", db)
-    userQuery = uskit.query_service("./query_user.json", db)
-    chatQuery = uskit.query_service("./query_chat.json", db)
+    userTxn = uskit.txn_service(db, "./txn_user.json")
+    chatTxn = uskit.txn_service(db, "./txn_chat.json")
+    userQuery = uskit.query_service(db, "./query_user.json")
+    chatQuery = uskit.query_service(db, "./query_chat.json")
 
     # Setup
-    server.on("/uchat", login)
-    login.on("session", userTxn)
-    login.on("session", chatTxn)
-    login.on("session", userQuery)
-    login.on("session", chatQuery)
+    server.on("/uchat", lambda event : login.trigger(event))
+    login.on("session", lambda event : userTxn.trigger(event))
+    login.on("session", lambda event : chatTxn.trigger(event))
+    login.on("session", lambda event : userQuery.trigger(event))
+    login.on("session", lambda event : chatQuery.trigger(event))
 
     # Listen for connections
     server.listen(8080)
@@ -63,18 +64,25 @@ class LoginProxy:
         self.lastOpen = None
         self.eventManager = uskit.event_manager()
 
-    async def __call__(self, event):
-        self.session = event["session"]
-        self.session.on("LOGIN", self.__on_login)
-
     def on(self, type, handler):
         self.session.on(type, self.__on_event)
         self.eventManager.on(type, handler)
 
+    async def trigger(self, event):
+        type = event["type"]
+
+        if   type == "session" : await self.__on_session(event)
+        else                   : debug.debug("Unhandled event", event)
+
+    async def __on_session(self, event):
+        self.session = event["session"]
+
+        self.session.on("LOGIN", self.__on_login)
+
     async def __on_event(self, event):
-        if   event.get("message") and self.auth : await self.__on_message(event)          # Authenticated message
+        if   event.get("type") == "open"        : self.lastOpen = event                   # Delay open event until authenticated
+        elif event.get("message") and self.auth : await self.__on_message(event)          # Authenticated message
         elif event.get("message")               : await self.__on_noauth(event)           # Unauthenticated message
-        elif event.get("type") == "open"        : self.lastOpen = event                   # Delay open event until authenticated
         else                                    : await self.eventManager.trigger(event)  # Pass through other events
 
     async def __on_login(self, event):

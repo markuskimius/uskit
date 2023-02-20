@@ -12,10 +12,10 @@ SCRIPTDIR = os.path.dirname(SCRIPTPATH)
 async def main():
     db = await uskit.database("./test-db.json", datafiles=["test-db.csv"])
     server = uskit.server()
-    testQuery = uskit.query_service("./test-query.json", db)
+    testQuery = uskit.query_service(db, "./test-query.json")
 
     # Setup
-    server.on("/regression", testQuery)
+    server.on("/regression", lambda event : testQuery.trigger(event))
 
     # Listen for connections
     server.listen(8080)
