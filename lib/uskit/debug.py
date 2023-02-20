@@ -6,12 +6,13 @@ import inspect
 # GLOBALS
 
 DEBUG_LEVEL = {
-    "ERROR"    : True,
-    "WARNING"  : True,
     "INFO"     : True,
     "TRACE"    : True,
-    "SOCKET"   : True,
+    "WARNING"  : True,
+    "ERROR"    : True,
     "DEBUG"    : True,
+    "EVENT"    : False,
+    "SOCKET"   : True,
     "DATABASE" : False,
 };
 
@@ -21,58 +22,57 @@ DEBUG_LEVEL = {
 
 def log(level, *args, **kwargs):
     if DEBUG_LEVEL.get(level):
-        print(f"[{level}]", *args, file=sys.stderr, **kwargs)
+        color = kwargs.get("color")
+        stack = kwargs.get("stack")
+
+        # Stackframe
+        if stack:
+            args = list(args)
+            frames = []
+
+            if stack == 1 : depth = 3     # 1 depth
+            else          : depth = None  # Infinite depth
+
+            for frame in inspect.stack()[2:depth]:
+                filepath = frame[1]
+                lineno = frame[2]
+                func = frame[3]
+                frames += [f"at {filepath} line {lineno} in {func}()"]
+
+            if stack == 1 : args += frames
+            else          : args += ["\n    ".join(frames)]
+
+        # Color on
+        if sys.stderr.isatty() and color is not None:
+            sys.stderr.write(f"\033[1;{color}m")
+
+        print(f"[{level}]", *args, file=sys.stderr)
+
+        # Color off
+        if sys.stderr.isatty() and color is not None:
+            sys.stderr.write("\33[0m")
 
 def info(*args, **kwargs):
     log("INFO", *args, **kwargs)
+
+def trace(*args, **kwargs):
+    log("TRACE", *args, stack=1, **kwargs)
+
+def warning(*args, **kwargs):
+    log("WARNING", *args, color=33, **kwargs)
+
+def error(*args, **kwargs):
+    log("ERROR", *args, color=31, **kwargs)
+
+def debug(*args, **kwargs):
+    log("DEBUG", *args, color=33, stack=2, **kwargs)
+
+def event(*args, **kwargs):
+    log("EVENT", *args, color=35, stack=2, **kwargs)
 
 def socket(*args, **kwargs):
     log("SOCKET", *args, **kwargs)
 
 def database(*args, **kwargs):
     log("DATABASE", *args, **kwargs)
-
-def debug(*args, **kwargs):
-    stack = ""
-
-    if sys.stderr.isatty():
-        sys.stderr.write("\033[1;35m")
-
-    for frame in inspect.stack()[1:]:
-        filepath = frame[1]
-        lineno = frame[2]
-        func = frame[3]
-
-        stack += f"\n    at {filepath} line {lineno} in {func}()"
-
-    log("DEBUG", *args, stack, **kwargs)
-
-    if sys.stderr.isatty():
-        sys.stderr.write("\33[0m")
-
-def trace(*args, **kwargs):
-    frame = inspect.stack()[1]
-    filepath = frame[1]
-    lineno = frame[2]
-    func = frame[3]
-
-    log("TRACE", *args, f"at {filepath} line {lineno} in {func}()", **kwargs)
-
-def warning(*args, **kwargs):
-    if sys.stderr.isatty():
-        sys.stderr.write("\033[1;33m")
-
-    log("WARNING", *args, **kwargs)
-
-    if sys.stderr.isatty():
-        sys.stderr.write("\33[0m")
-
-def error(*args, **kwargs):
-    if sys.stderr.isatty():
-        sys.stderr.write("\033[1;31m")
-
-    log("ERROR", *args, **kwargs)
-
-    if sys.stderr.isatty():
-        sys.stderr.write("\33[0m")
 

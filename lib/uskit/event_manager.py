@@ -1,4 +1,5 @@
 import asyncio
+from . import debug
 
 
 ##############################################################################
@@ -29,6 +30,8 @@ class EventManager:
     async def trigger(self, event):
         type = event.get("type")
         tasks = []
+
+        debug.event("trigger", event);
 
         for handler in self.handlersByType.get(type, []):
             tasks += [handler(event)]
