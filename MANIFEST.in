@@ -1,2 +1,3 @@
 include lib/uskit/*
 include lib/uskit/static/*
+include lib/uskit/static/widget/*

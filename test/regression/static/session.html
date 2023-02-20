@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Test</title>
+    </head>
+    <body>
+        <button id="test-nack">Test Nack</button>
+
+        <script type="module">
+            import * as uskit from "/uskit/index.js";
+            import * as debug from "/uskit/debug.js";
+
+            const session = uskit.session();
+
+            function main() {
+                document.querySelector("#test-nack").addEventListener("click", async () => await test_nack());
+
+                session.on("NACK", async (event) => await on_nack(event));
+                session.on("open", async (event) => await on_open(event));
+                session.on("close", async (event) => await on_close(event));
+                session.on("*", async (event) => await on_any(event));
+
+                session.open("/regression");
+            }
+
+            async function test_nack() {
+                session.send({
+                    "MESSAGE_TYPE" : "TEST",
+                })
+            }
+
+            async function on_nack(event) {
+                debug.info("on_nack", event);
+            }
+
+            async function on_open(event) {
+                debug.info("on_open", event);
+            }
+
+            async function on_close(event) {
+                debug.info("on_close", event);
+            }
+
+            async function on_any(event) {
+                debug.info("on_any", event);
+            }
+
+            main();
+        </script>
+    </body>
+</html>

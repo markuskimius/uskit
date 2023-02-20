@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Test</title>
+    </head>
+    <body>
+        <input id="message-text" value="Hello, world!"></input>
+        <button id="test-ack">Test Ack</button>
+        <button id="test-nack">Test Nack</button>
+        <button id="test-submit">Test Submit</button>
+
+        <script type="module">
+            import * as uskit from "/uskit/index.js";
+            import * as debug from "/uskit/debug.js";
+
+            const session = uskit.session();
+            const txn_client = uskit.txn_client(session, "TXN_CHAT");
+
+            function main() {
+                document.querySelector("#test-ack").addEventListener("click", async () => await test_ack());
+                document.querySelector("#test-nack").addEventListener("click", async () => await test_nack());
+                document.querySelector("#test-submit").addEventListener("click", async () => await test_submit());
+
+                txn_client.on("ack", async (event) => await on_ack(event));
+                txn_client.on("nack", async (event) => await on_nack(event));
+
+                session.open("/regression");
+            }
+
+            async function test_ack(event) {
+                const text = document.querySelector("#message-text").value;
+
+                await txn_client.send({
+                    "USER_ID"      : 1,
+                    "MESSAGE_TEXT" : text,
+                });
+            }
+
+            async function test_nack(event) {
+                await txn_client.send({});
+            }
+
+            async function test_submit(event) {
+                const text = document.querySelector("#message-text").value;
+
+                await txn_client.on_submit({
+                    "content" : {
+                        "USER_ID"      : 1,
+                        "MESSAGE_TEXT" : text,
+                    }
+                });
+            }
+
+            async function on_ack(event) {
+                debug.info("on_ack", event);
+            }
+
+            async function on_nack(event) {
+                debug.info("on_nack", event);
+            }
+
+            main();
+        </script>
+    </body>
+</html>

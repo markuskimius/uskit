@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Test</title>
+    </head>
+    <body>
+        <script type="module">
+            import * as uskit from "/uskit/index.js";
+            import * as debug from "/uskit/debug.js";
+
+            const session = uskit.session();
+            const query_client = uskit.query_client(session, "CHAT_QUERY");
+
+            function main() {
+                query_client.on("ack", async (event) => await on_ack(event));
+                query_client.on("nack", async (event) => await on_nack(event));
+                query_client.on("reset", async (event) => await on_reset(event));
+                query_client.on("column", async (event) => await on_column(event));
+                query_client.on("insert", async (event) => await on_insert(event));
+                query_client.on("update", async (event) => await on_update(event));
+                query_client.on("delete", async (event) => await on_delete(event));
+
+                session.open("/regression");
+            }
+
+            async function on_ack(event) {
+                debug.info("on_ack", event);
+            }
+
+            async function on_nack(event) {
+                debug.info("on_nack", event);
+            }
+
+            async function on_reset(event) {
+                debug.info("on_reset", event);
+            }
+
+            async function on_column(event) {
+                debug.info("on_column", event);
+            }
+
+            async function on_insert(event) {
+                debug.info("on_insert", event);
+            }
+
+            async function on_update(event) {
+                debug.info("on_update", event);
+            }
+
+            async function on_delete(event) {
+                debug.info("on_delete", event);
+            }
+
+            main();
+        </script>
+    </body>
+</html>
