@@ -18,7 +18,7 @@ class EventManager:
 
     def off(self, type, handler):
         try:
-            handlers = self.handlersByType.get("*", []) + self.handlersByType.get(type, [])
+            handlers = self.handlersByType.get(type, [])
             handlers.remove(handler)
 
             if len(handlers) == 0:
