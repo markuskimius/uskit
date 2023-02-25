@@ -107,5 +107,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 # FACTORY
 
 def server(**kwargs):
+    """
+        Create and return a uskit server object.
+    """
     return Server(**kwargs)
 

@@ -4,11 +4,14 @@ Client API Reference (Javascript)
 Factories
 ---------
 
-.. js:autofunction:: createPageWidget
-.. js:autofunction:: createTableWidget
-.. js:autofunction:: createDialogWidget
+.. js:autofunction:: session
+.. js:autofunction:: txn_client
+.. js:autofunction:: query_client
 
-.. js:autofunction:: createSession
-.. js:autofunction:: createTxnClient
-.. js:autofunction:: createQueryClient
+.. js:autofunction:: page_widget
+.. js:autofunction:: table_widget
+.. js:autofunction:: dialog_widget
+
+.. js:autofunction:: x_query_table
+.. js:autofunction:: x_widget_txn
 

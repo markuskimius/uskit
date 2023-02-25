@@ -404,6 +404,9 @@ class QueryData:
 # FACTORY
 
 def query_service(db, cfgfile):
+    """
+        Create and return a query service object.
+    """
     with open(cfgfile) as fd:
         queryCfg = json.load(fd)
 

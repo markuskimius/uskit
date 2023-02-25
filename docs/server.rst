@@ -5,8 +5,8 @@ Server API Reference
 
     import uskit
 
-.. autofunction:: uskit.createServer
-.. autofunction:: uskit.createTxnService
-.. autofunction:: uskit.createQueryService
-.. autofunction:: uskit.createDatabaseAccessor
+.. autofunction:: uskit.server
+.. autofunction:: uskit.txn_service
+.. autofunction:: uskit.query_service
+.. autofunction:: uskit.database
 

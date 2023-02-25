@@ -156,6 +156,9 @@ class TxnService:
 # FACTORY
 
 def txn_service(db, cfgfile):
+    """
+        Create and return a transaction service object.
+    """
     with open(cfgfile) as fd:
         cfg = json.load(fd)
 

@@ -301,6 +301,9 @@ async def csvop(filename, rowHandler):
 # FACTORY
 
 async def database(cfgfile=None, **kwargs):
+    """
+        Create and return a database object.
+    """
     db = Database()
     dbfile = kwargs.get("dbfile")
     datafiles = kwargs.get("datafiles", [])
